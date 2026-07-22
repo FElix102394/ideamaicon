@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>worklist_handoff_Assistant</title>
+  <style>
+    :root {
+      --navy: #001f3f;
+      --navy-2: #003b66;
+      --blue: #0066cc;
+      --blue-hover: #0055aa;
+      --panel: #fdf5e6;
+      --bg: #eef2f6;
+      --border: #d7dde5;
+      --text: #243040;
+      --muted: #64748b;
+      --danger: #b42318;
+      --success: #1f7a3f;
+      --warning: #a15c00;
+      --shadow: 0 2px 10px rgba(0, 0, 0, 0.14);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { margin: 0; min-height: 100%; }
+
+    body {
+      min-height: 100vh;
+      font-family: Arial, Helvetica, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      overflow: hidden;
+    }
+
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+      outline: 3px solid rgba(0, 102, 204, 0.3);
+      outline-offset: 2px;
+    }
+
+    .left {
+      flex: 0 0 40%;
+      max-width: 46%;
+      min-width: 430px;
+      background: var(--navy);
+      padding: 1rem;
+      overflow: auto;
+    }
+
+    .right {
+      flex: 1;
+      min-width: 0;
+      background: var(--navy);
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      overflow: auto;
+    }
+
+    .panel, .monthBox {
+      background: var(--panel);
+      border-radius: 10px;
+      padding: 1rem;
+      box-shadow: var(--shadow);
+    }
+
+    .panel { margin-bottom: 1rem; }
+    .panel h2 { margin: 0 0 0.8rem; font-size: 1.18rem; color: #2f3742; }
+
+    .current-store {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .store-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      max-width: 100%;
+      padding: 0.45rem 0.7rem;
+      border-radius: 999px;
+      background: #e6f0fb;
+      color: #123d66;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+
+    .two-col { display: flex; gap: 1rem; align-items: flex-start; }
+    .col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.65rem; }
+    .col > .form-group {
+      background: #fff;
+      padding: 0.8rem;
+      border-radius: 7px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 0.32rem;
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: #52606d;
+    }
+
+    .form-group input, .form-group textarea, .form-group select {
+      width: 100%;
+      padding: 0.55rem 0.6rem;
+      border: 1px solid #c8d0da;
+      border-radius: 5px;
+      font-size: 0.94rem;
+      background: #fff;
+      color: var(--text);
+    }
+
+    .form-group textarea { min-height: 5rem; resize: vertical; }
+    .single-line { display: flex; align-items: center; gap: 0.45rem; font-size: 0.92rem; color: #52606d; }
+    .single-line input { margin: 0; width: auto; }
+
+    .form-actions { text-align: right; margin-top: 0.75rem; display: flex; justify-content: flex-end; gap: 0.5rem; }
+
+    .btn {
+      border: 0;
+      border-radius: 5px;
+      padding: 0.58rem 0.95rem;
+      font-weight: 700;
+      background: var(--blue);
+      color: white;
+    }
+    .btn:hover { background: var(--blue-hover); }
+    .btn.secondary { background: #5f6b78; }
+    .btn.secondary:hover { background: #48525d; }
+    .btn.danger { background: var(--danger); }
+    .btn.danger:hover { background: #8d1b13; }
+    .btn.light { background: #e5e7eb; color: #28313b; border: 1px solid #cfd4da; }
+    .btn.light:hover { background: #d8dde3; }
+    .btn.small { padding: 0.32rem 0.55rem; font-size: 0.84rem; }
+
+    .control-line { display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap; margin-bottom: 0.65rem; }
+    .control-line label { font-size: 0.9rem; color: #52606d; font-weight: 700; }
+    .control-line select { min-width: 130px; padding: 0.4rem 0.5rem; border: 1px solid #c8d0da; border-radius: 5px; }
+
+    .backup-import { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.65rem 0; }
+    .backup-import button { padding: 0.45rem 0.75rem; }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.5rem;
+      margin: 0.75rem 0;
+    }
+    .summary-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 0.55rem;
+      text-align: center;
+    }
+    .summary-card strong { display: block; font-size: 1.1rem; color: #17385c; }
+    .summary-card span { font-size: 0.76rem; color: var(--muted); }
+
+    ul#taskList { list-style: none; padding: 0; margin: 0; }
+    ul#taskList li {
+      border-bottom: 1px solid #e4e7eb;
+      padding: 0.7rem 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.55rem;
+    }
+    ul#taskList li:last-child { border-bottom: 0; }
+    ul#taskList li.done { background: rgba(144, 238, 144, 0.22); }
+    ul#taskList li.overdue { background: rgba(255, 99, 71, 0.2); }
+    ul#taskList li.sub { padding-left: 1.45rem; }
+    ul#taskList li.hidden-by-parent { display: none; }
+
+    .status { width: 1.5rem; min-width: 1.5rem; text-align: center; font-weight: 800; }
+    .status.done { color: var(--success); }
+    .status.overdue { color: var(--danger); }
+    .status.pending { color: var(--warning); }
+
+    .task-content { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.25rem; }
+    .task-title { font-weight: 700; overflow-wrap: anywhere; }
+    .task-meta { color: #596675; font-size: 0.82rem; line-height: 1.35; overflow-wrap: anywhere; }
+    .task-note { margin-top: 0.15rem; color: #43515f; font-size: 0.86rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .actions { display: flex; gap: 0.3rem; flex-wrap: wrap; justify-content: flex-end; }
+
+    .empty-state {
+      padding: 1.2rem;
+      text-align: center;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.65);
+      border-radius: 7px;
+      border: 1px dashed #c8d0da;
+    }
+
+    .monthBox { flex: 1; min-height: 320px; display: flex; flex-direction: column; }
+    .monthHeader {
+      font-size: 1.35rem;
+      font-weight: 800;
+      text-align: center;
+      margin-bottom: 0.65rem;
+      color: #1e293b;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .monthHeader button { border: 0; font-size: 1.2rem; font-weight: 800; background: transparent; color: #1e293b; padding: 0.25rem 0.5rem; }
+
+    .monthTable { width: 100%; border-collapse: collapse; table-layout: fixed; flex: 1; }
+    .monthTable th, .monthTable td {
+      height: 3.2rem;
+      text-align: center;
+      vertical-align: top;
+      border: 1px solid #d4d9df;
+      position: relative;
+      user-select: none;
+      color: #111;
+      background: #fff;
+      padding: 0.35rem 0.2rem;
+    }
+    .monthTable th { height: 2rem; background: #f1f5f9; font-size: 0.88rem; }
+    .monthTable td[data-date] { cursor: pointer; }
+    .monthTable th:first-child, .monthTable td:first-child { color: #c00; }
+    .monthTable th:last-child, .monthTable td:last-child { color: #1459b8; }
+    .monthTable td.weekend { background: #fbfbfc; }
+    .monthTable td.selected { background: #ffe0e0; }
+    .monthTable td.today { box-shadow: inset 0 0 0 3px #0ea5e9; }
+    .monthTable td .dot {
+      width: 7px;
+      height: 7px;
+      background: #0066cc;
+      border-radius: 50%;
+      position: absolute;
+      bottom: 5px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .monthTable td .dot.overdue { background: var(--danger); }
+    .monthTable td .dot.done { background: var(--success); }
+    .monthTable td[data-date]:hover { box-shadow: inset 0 0 0 2px rgba(0, 102, 204, 0.35); }
+
+    .calendar-legend { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.65rem; font-size: 0.82rem; color: #52606d; }
+    .legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 0.25rem; background: var(--blue); }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.52);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      padding: 1rem;
+    }
+    .modal[hidden] { display: none; }
+    .modal-content {
+      background: #fff;
+      padding: 1.35rem;
+      border-radius: 10px;
+      width: min(420px, 100%);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+    }
+    .modal-content h3 { margin: 0 0 1rem; }
+    .modal-content .btns { margin-top: 1rem; text-align: right; display: flex; justify-content: flex-end; gap: 0.5rem; }
+    .modal-content .btns button { margin-left: 0; }
+    .error { color: #c00; min-height: 1.2em; font-size: 0.9rem; }
+    .info { color: #225ea8; font-size: 0.88rem; line-height: 1.45; }
+
+    .toast {
+      position: fixed;
+      right: 1rem;
+      bottom: 1rem;
+      z-index: 2000;
+      background: #172033;
+      color: #fff;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(12px);
+      pointer-events: none;
+      transition: 0.2s ease;
+      max-width: min(420px, calc(100vw - 2rem));
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 1050px) {
+      body { display: block; overflow: auto; }
+      .left, .right { max-width: none; min-width: 0; width: 100%; }
+      .right { min-height: auto; }
+    }
+    @media (max-width: 700px) {
+      .two-col { flex-direction: column; }
+      .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .monthTable th, .monthTable td { height: 2.8rem; font-size: 0.84rem; }
+      .actions { width: 100%; justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <main class="left" aria-label="업무 관리 영역">
+    <section class="panel current-store">
+      <div>
+        <h2>현재 스트리지</h2>
+        <div id="currentStore" class="store-badge" aria-live="polite">스트리지 선택 필요</div>
+      </div>
+      <button id="changeStoreBtn" class="btn light small" type="button">사용자 변경</button>
+    </section>
+
+    <section class="panel" id="formPanel">
+      <h2 id="formTitle">과제 입력</h2>
+      <form id="taskForm" novalidate>
+        <input type="hidden" id="editingId" value="" />
+        <div class="two-col">
+          <div class="col">
+            <div class="form-group">
+              <label for="mainSelect">기존 대과제 선택 (없으면 새 대과제)</label>
+              <select id="mainSelect">
+                <option value="">-- 새 대과제 만들기 --</option>
+              </select>
+            </div>
+            <div class="form-group" id="newMainGroup">
+              <label for="newMain">새 대과제 제목</label>
+              <input type="text" id="newMain" placeholder="예) 연간 전력 계획" maxlength="120" />
+            </div>
+            <div class="form-group">
+              <label for="subTitle">소과제 제목 (선택)</label>
+              <input type="text" id="subTitle" placeholder="예) 분대별 목표 설정" maxlength="160" />
+            </div>
+            <div class="form-group">
+              <label for="ownerInput">담당자</label>
+              <input type="text" id="ownerInput" placeholder="예) 홍길동" maxlength="80" />
+            </div>
+          </div>
+
+          <div class="col">
+            <div class="form-group">
+              <label for="memo">메모 (선택)</label>
+              <textarea id="memo" rows="4" maxlength="1000" placeholder="과제 관련 참고사항"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="startDeadline">시작 기한</label>
+              <input type="datetime-local" id="startDeadline" />
+            </div>
+            <div class="form-group">
+              <label for="endDeadline">끝 기한</label>
+              <input type="datetime-local" id="endDeadline" />
+            </div>
+            <label class="single-line"><input type="checkbox" id="completed" /> 완료 처리</label>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" id="cancelEditBtn" class="btn secondary" hidden>수정 취소</button>
+          <button type="submit" id="addBtn" class="btn">과제 추가</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel" id="listPanel">
+      <h2>과제 리스트</h2>
+
+      <div class="control-line">
+        <label for="storeSelect">스트리지 선택</label>
+        <select id="storeSelect">
+          <option value="">-- 현재 스트리지 --</option>
+        </select>
+      </div>
+
+      <div class="control-line">
+        <label for="filterSelect">리스트 필터</label>
+        <select id="filterSelect">
+          <option value="all">전체</option>
+          <option value="done">완료</option>
+          <option value="overdue">기한 초과</option>
+          <option value="pending">진행 중</option>
+        </select>
+
+        <label for="sortSelect">정렬 방식</label>
+        <select id="sortSelect">
+          <option value="newest">등록 최신순</option>
+          <option value="oldest">등록 오래된순</option>
+          <option value="deadline">기한 가까운순</option>
+          <option value="title">제목 가나다순</option>
+          <option value="owner">담당자 가나다순</option>
+        </select>
+
+        <label class="single-line"><input type="checkbox" id="showSub" checked /> 소과제 표시</label>
+      </div>
+
+      <div class="backup-import">
+        <button id="backupBtn" type="button" class="btn small">리스트 백업</button>
+        <button id="loadBtn" type="button" class="btn small">리스트 불러오기</button>
+        <button id="exportAllBtn" type="button" class="btn secondary small">전체 스트리지 백업</button>
+        <input type="file" id="fileInput" accept="application/json,.json" hidden />
+      </div>
+
+      <div class="summary" aria-label="업무 요약">
+        <div class="summary-card"><strong id="sumAll">0</strong><span>전체</span></div>
+        <div class="summary-card"><strong id="sumDone">0</strong><span>완료</span></div>
+        <div class="summary-card"><strong id="sumPending">0</strong><span>진행 중</span></div>
+        <div class="summary-card"><strong id="sumOverdue">0</strong><span>기한 초과</span></div>
+      </div>
+
+      <ul id="taskList" aria-live="polite"></ul>
+    </section>
+  </main>
+
+  <aside class="right" aria-label="두 달 달력">
+    <section class="monthBox">
+      <div class="monthHeader">
+        <button id="prevMonth" type="button" aria-label="이전 달">&#9664;</button>
+        <span id="header0"></span>
+        <button id="nextMonth" type="button" aria-label="다음 달">&#9654;</button>
+      </div>
+      <table class="monthTable" aria-label="첫 번째 달력">
+        <thead><tr><th>일</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th></tr></thead>
+        <tbody id="calBody0"></tbody>
+      </table>
+    </section>
+
+    <section class="monthBox">
+      <div class="monthHeader"><span id="header1"></span></div>
+      <table class="monthTable" aria-label="다음 달 달력">
+        <thead><tr><th>일</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th></tr></thead>
+        <tbody id="calBody1"></tbody>
+      </table>
+    </section>
+
+    <div class="calendar-legend">
+      <span><i class="legend-dot"></i>업무 일정</span>
+      <span><i class="legend-dot" style="background:#1f7a3f"></i>완료 일정</span>
+      <span><i class="legend-dot" style="background:#b42318"></i>기한 초과 일정</span>
+      <span>날짜를 두 번 누르면 빨간날 표시/해제</span>
+    </div>
+  </aside>
+
+  <div id="startupModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="startupTitle">
+    <div class="modal-content">
+      <h3 id="startupTitle">소속과 직책을 입력하세요.</h3>
+      <div class="form-group">
+        <label for="deptInput">소속</label>
+        <input type="text" id="deptInput" placeholder="예) 인사팀" maxlength="80" autocomplete="organization" />
+      </div>
+      <div class="form-group">
+        <label for="roleInput">직책</label>
+        <input type="text" id="roleInput" placeholder="예) 팀장" maxlength="80" autocomplete="organization-title" />
+      </div>
+      <p class="info">입력한 소속·직책별로 별도의 업무 스트리지가 생성됩니다. 자료는 이 브라우저의 로컬 저장소에만 보관됩니다.</p>
+      <div id="startupError" class="error" aria-live="assertive"></div>
+      <div class="btns">
+        <button id="btnClose" type="button" class="btn secondary">닫기</button>
+        <button id="btnConfirm" type="button" class="btn">확인</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="newStoreModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="newStoreTitle">
+    <div class="modal-content">
+      <h3 id="newStoreTitle">새 스트리지 만들기</h3>
+      <div class="form-group">
+        <label for="newDept">소속</label>
+        <input type="text" id="newDept" />
+      </div>
+      <div class="form-group">
+        <label for="newRole">직책</label>
+        <input type="text" id="newRole" />
+      </div>
+      <div id="newMsg" class="error"></div>
+      <div class="btns">
+        <button id="cancelNew" type="button" class="btn secondary">취소</button>
+        <button id="createStore" type="button" class="btn">생성</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    "use strict";
+
+    const STORAGE_PREFIX = "arvis_store_";
+    const APP_VERSION = 2;
+
+    const appState = {
+      currentStoreKey: null,
+      tasks: [],
+      redDays: []
+    };
+
+    let currentFilter = "all";
+    let currentSort = "newest";
+    let showSub = true;
+    let curYear = new Date().getFullYear();
+    let curMonth = new Date().getMonth();
+    let toastTimer = null;
+
+    const $ = (id) => document.getElementById(id);
+
+    function showToast(message) {
+      const el = $("toast");
+      el.textContent = message;
+      el.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove("show"), 2200);
+    }
+
+    function normalizeText(value) {
+      return String(value ?? "").trim();
+    }
+
+    function safeKeyPart(value) {
+      return normalizeText(value)
+        .replace(/[\s/\\]+/g, "_")
+        .replace(/[^0-9A-Za-z가-힣_-]/g, "")
+        .slice(0, 80);
+    }
+
+    function makeStoreKey(dept, role) {
+      const d = safeKeyPart(dept);
+      const r = safeKeyPart(role);
+      if (!d || !r) throw new Error("소속과 직책을 올바르게 입력하세요.");
+      return `${STORAGE_PREFIX}${d}_${r}`;
+    }
+
+    function parseMetaFromKey(key) {
+      const body = String(key).replace(STORAGE_PREFIX, "");
+      const splitAt = body.lastIndexOf("_");
+      if (splitAt < 0) return { dept: body, role: "" };
+      return { dept: body.slice(0, splitAt), role: body.slice(splitAt + 1) };
+    }
+
+    function isValidTask(task) {
+      return task && typeof task === "object" && Number.isFinite(Number(task.id)) && typeof task.title === "string";
+    }
+
+    function normalizePayload(payload, fallbackMeta = {}) {
+      const meta = payload?.meta && typeof payload.meta === "object" ? payload.meta : fallbackMeta;
+      const tasks = Array.isArray(payload?.tasks) ? payload.tasks.filter(isValidTask).map((t) => ({
+        id: Number(t.id),
+        title: normalizeText(t.title),
+        memo: normalizeText(t.memo),
+        owner: normalizeText(t.owner),
+        start: t.start || null,
+        end: t.end || null,
+        completed: Boolean(t.completed),
+        parentId: t.parentId == null ? null : Number(t.parentId),
+        createdAt: Number(t.createdAt || t.id || Date.now()),
+        updatedAt: Number(t.updatedAt || t.createdAt || t.id || Date.now())
+      })).filter((t) => t.title) : [];
+
+      const redDays = Array.isArray(payload?.redDays)
+        ? [...new Set(payload.redDays.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(String(d))))]
+        : [];
+
+      return {
+        version: APP_VERSION,
+        meta: { dept: normalizeText(meta?.dept), role: normalizeText(meta?.role) },
+        tasks,
+        redDays
+      };
+    }
+
+    function loadStore(key) {
+      if (!key) return;
+      const raw = localStorage.getItem(key);
+      const fallbackMeta = parseMetaFromKey(key);
+      let payload;
+
+      if (!raw) {
+        payload = normalizePayload({ meta: fallbackMeta, tasks: [], redDays: [] }, fallbackMeta);
+        localStorage.setItem(key, JSON.stringify(payload));
+      } else {
+        try {
+          payload = normalizePayload(JSON.parse(raw), fallbackMeta);
+        } catch (error) {
+          alert("저장 자료를 읽지 못했습니다. 원본은 유지하고 빈 스트리지로 열겠습니다.");
+          payload = normalizePayload({ meta: fallbackMeta, tasks: [], redDays: [] }, fallbackMeta);
+        }
+      }
+
+      appState.currentStoreKey = key;
+      appState.tasks = payload.tasks;
+      appState.redDays = payload.redDays;
+
+      const meta = payload.meta.dept && payload.meta.role ? payload.meta : fallbackMeta;
+      $("currentStore").textContent = `${meta.dept} · ${meta.role} 업무 리스트`;
+      renderSelect();
+      renderList();
+      renderTwoMonths();
+      refreshStoreSelect();
+    }
+
+    function saveCurrentStore() {
+      if (!appState.currentStoreKey) return;
+      const meta = parseMetaFromKey(appState.currentStoreKey);
+      const payload = {
+        version: APP_VERSION,
+        meta,
+        tasks: appState.tasks,
+        redDays: appState.redDays,
+        savedAt: new Date().toISOString()
+      };
+      localStorage.setItem(appState.currentStoreKey, JSON.stringify(payload));
+    }
+
+    function backupCurrentStore() {
+      if (!appState.currentStoreKey) return;
+      saveCurrentStore();
+      const data = localStorage.getItem(appState.currentStoreKey);
+      const meta = parseMetaFromKey(appState.currentStoreKey);
+      const date = new Date().toISOString().slice(0, 10);
+      downloadText(data, `arvis_${safeKeyPart(meta.dept)}_${safeKeyPart(meta.role)}_${date}.json`);
+      showToast("현재 스트리지 백업을 저장했습니다.");
+    }
+
+    function backupAllStores() {
+      const stores = {};
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const key = localStorage.key(i);
+        if (!key?.startsWith(STORAGE_PREFIX)) continue;
+        try { stores[key] = JSON.parse(localStorage.getItem(key)); } catch { /* ignore invalid */ }
+      }
+      const bundle = { version: APP_VERSION, exportedAt: new Date().toISOString(), stores };
+      downloadText(JSON.stringify(bundle, null, 2), `arvis_all_stores_${new Date().toISOString().slice(0, 10)}.json`);
+      showToast("전체 스트리지 백업을 저장했습니다.");
+    }
+
+    function downloadText(text, filename) {
+      const blob = new Blob([text], { type: "application/json;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 0);
+    }
+
+    function importStoreFromFile(file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const obj = JSON.parse(reader.result);
+
+          if (obj && obj.stores && typeof obj.stores === "object") {
+            const keys = Object.keys(obj.stores).filter((k) => k.startsWith(STORAGE_PREFIX));
+            if (!keys.length) throw new Error("백업 안에 스트리지가 없습니다.");
+            const overwrite = confirm(`${keys.length}개 스트리지를 불러옵니다. 같은 이름의 스트리지는 덮어씁니다. 계속하시겠습니까?`);
+            if (!overwrite) return;
+            for (const key of keys) {
+              const meta = parseMetaFromKey(key);
+              localStorage.setItem(key, JSON.stringify(normalizePayload(obj.stores[key], meta)));
+            }
+            refreshStoreSelect();
+            showToast("전체 스트리지 백업을 불러왔습니다.");
+            return;
+          }
+
+          const meta = obj?.meta && normalizeText(obj.meta.dept) && normalizeText(obj.meta.role)
+            ? obj.meta
+            : {
+                dept: prompt("소속을 입력하세요."),
+                role: prompt("직책을 입력하세요.")
+              };
+
+          if (!normalizeText(meta.dept) || !normalizeText(meta.role)) return;
+          const key = makeStoreKey(meta.dept, meta.role);
+          if (localStorage.getItem(key) && !confirm(`${meta.dept} · ${meta.role} 스트리지가 이미 있습니다. 덮어쓰시겠습니까?`)) return;
+
+          localStorage.setItem(key, JSON.stringify(normalizePayload(obj, meta)));
+          loadStore(key);
+          showToast("스트리지를 불러왔습니다.");
+        } catch (error) {
+          alert(`파일을 불러오지 못했습니다.\n${error.message || "올바른 JSON 형식이 아닙니다."}`);
+        }
+      };
+      reader.onerror = () => alert("파일 읽기에 실패했습니다.");
+      reader.readAsText(file, "UTF-8");
+    }
+
+    function refreshStoreSelect() {
+      const sel = $("storeSelect");
+      sel.innerHTML = '<option value="">-- 현재 스트리지 --</option>';
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const key = localStorage.key(i);
+        if (key?.startsWith(STORAGE_PREFIX)) keys.push(key);
+      }
+      keys.sort((a, b) => a.localeCompare(b, "ko"));
+      for (const key of keys) {
+        const meta = parseMetaFromKey(key);
+        const opt = document.createElement("option");
+        opt.value = key;
+        opt.textContent = `${meta.dept} · ${meta.role}`;
+        opt.selected = key === appState.currentStoreKey;
+        sel.appendChild(opt);
+      }
+    }
+
+    function renderSelect() {
+      const sel = $("mainSelect");
+      const prev = sel.value;
+      sel.innerHTML = '<option value="">-- 새 대과제 만들기 --</option>';
+      appState.tasks
+        .filter((t) => t.parentId === null)
+        .sort((a, b) => a.title.localeCompare(b.title, "ko"))
+        .forEach((t) => {
+          const opt = document.createElement("option");
+          opt.value = String(t.id);
+          opt.textContent = t.title;
+          sel.appendChild(opt);
+        });
+      if ([...sel.options].some((o) => o.value === prev)) sel.value = prev;
+      updateNewMainVisibility();
+    }
+
+    function getTaskStatus(item, now = new Date()) {
+      if (item.completed) return "done";
+      if (item.end && new Date(item.end).getTime() < now.getTime()) return "overdue";
+      return "pending";
+    }
+
+    function filterPass(item, now) {
+      return currentFilter === "all" || currentFilter === getTaskStatus(item, now);
+    }
+
+    function sortArray(arr, mode) {
+      return [...arr].sort((a, b) => {
+        switch (mode) {
+          case "newest": return b.createdAt - a.createdAt;
+          case "oldest": return a.createdAt - b.createdAt;
+          case "deadline": {
+            const aTime = a.end ? new Date(a.end).getTime() : Infinity;
+            const bTime = b.end ? new Date(b.end).getTime() : Infinity;
+            return aTime - bTime;
+          }
+          case "title": return a.title.localeCompare(b.title, "ko");
+          case "owner": return (a.owner || "").localeCompare(b.owner || "", "ko");
+          default: return 0;
+        }
+      });
+    }
+
+    function renderSummary() {
+      const now = new Date();
+      const counts = { all: appState.tasks.length, done: 0, pending: 0, overdue: 0 };
+      for (const t of appState.tasks) counts[getTaskStatus(t, now)] += 1;
+      $("sumAll").textContent = counts.all;
+      $("sumDone").textContent = counts.done;
+      $("sumPending").textContent = counts.pending;
+      $("sumOverdue").textContent = counts.overdue;
+    }
+
+    function renderList() {
+      const ul = $("taskList");
+      ul.innerHTML = "";
+      const now = new Date();
+      const mainTasks = sortArray(appState.tasks.filter((t) => t.parentId === null), currentSort);
+      let visibleCount = 0;
+
+      for (const main of mainTasks) {
+        const subTasks = sortArray(appState.tasks.filter((t) => t.parentId === main.id), currentSort);
+        const mainVisible = filterPass(main, now);
+        const visibleSubs = showSub ? subTasks.filter((t) => filterPass(t, now)) : [];
+
+        if (mainVisible) {
+          ul.appendChild(makeLi(main, now, false));
+          visibleCount += 1;
+        }
+        for (const sub of visibleSubs) {
+          ul.appendChild(makeLi(sub, now, true));
+          visibleCount += 1;
+        }
+      }
+
+      if (!visibleCount) {
+        const li = document.createElement("li");
+        li.className = "empty-state";
+        li.textContent = "조건에 맞는 과제가 없습니다.";
+        ul.appendChild(li);
+      }
+      renderSummary();
+    }
+
+    function makeLi(item, now, isSub) {
+      const status = getTaskStatus(item, now);
+      const li = document.createElement("li");
+      li.dataset.id = String(item.id);
+      li.classList.add(status);
+      if (isSub) li.classList.add("sub");
+
+      const select = document.createElement("input");
+      select.type = "checkbox";
+      select.className = "selectChk";
+      select.setAttribute("aria-label", `${item.title} 선택`);
+      if (isSub) select.checked = true;
+      li.appendChild(select);
+
+      const st = document.createElement("span");
+      st.className = `status ${status}`;
+      st.textContent = status === "done" ? "✓" : status === "overdue" ? "!" : "·";
+      li.appendChild(st);
+
+      const cont = document.createElement("div");
+      cont.className = "task-content";
+
+      const title = document.createElement("div");
+      title.className = "task-title";
+      title.textContent = item.title;
+      cont.appendChild(title);
+
+      const meta = document.createElement("div");
+      meta.className = "task-meta";
+      const parts = [];
+      if (item.owner) parts.push(`담당자: ${item.owner}`);
+      if (item.start) parts.push(`시작: ${formatDateTime(item.start)}`);
+      if (item.end) parts.push(`종료: ${formatDateTime(item.end)}`);
+      meta.textContent = parts.join(" | ");
+      cont.appendChild(meta);
+
+      if (item.memo) {
+        const note = document.createElement("div");
+        note.className = "task-note";
+        note.textContent = item.memo;
+        cont.appendChild(note);
+      }
+      li.appendChild(cont);
+
+      const act = document.createElement("div");
+      act.className = "actions";
+      act.append(
+        actionButton(item.completed ? "미완료" : "완료", () => toggleCompleted(item.id), "btn light small"),
+        actionButton("수정", () => editItem(item.id), "btn light small"),
+        actionButton("삭제", () => deleteItem(item.id), "btn danger small")
+      );
+      li.appendChild(act);
+
+      if (isSub) {
+        select.addEventListener("change", () => {
+          const siblings = document.querySelectorAll(`li.sub[data-parent-id="${item.parentId}"] .selectChk`);
+          siblings.forEach((cb) => { if (select.checked) cb.checked = true; });
+        });
+        li.dataset.parentId = String(item.parentId);
+      }
+      return li;
+    }
+
+    function actionButton(text, handler, className) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = className;
+      btn.textContent = text;
+      btn.addEventListener("click", handler);
+      return btn;
+    }
+
+    function formatDateTime(value) {
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? "-" : date.toLocaleString("ko-KR", { dateStyle: "short", timeStyle: "short" });
+    }
+
+    function getDateOnly(datetimeStr) {
+      return datetimeStr ? String(datetimeStr).slice(0, 10) : null;
+    }
+
+    function handleTaskSubmit(event) {
+      event.preventDefault();
+      if (!appState.currentStoreKey) return alert("먼저 스트리지를 선택하세요.");
+
+      const selectedMain = $("mainSelect").value;
+      const newMain = normalizeText($("newMain").value);
+      const subTitle = normalizeText($("subTitle").value);
+      const owner = normalizeText($("ownerInput").value);
+      const memo = normalizeText($("memo").value);
+      const start = $("startDeadline").value || null;
+      const end = $("endDeadline").value || null;
+      const completed = $("completed").checked;
+      const editingId = Number($("editingId").value || 0);
+
+      if (start && end && new Date(start) > new Date(end)) {
+        alert("끝 기한은 시작 기한보다 빠를 수 없습니다.");
+        return;
+      }
+
+      let mainId = null;
+      if (selectedMain) {
+        mainId = Number(selectedMain);
+      } else if (newMain) {
+        const existingMain = appState.tasks.find((t) => t.parentId === null && t.title === newMain && t.id !== editingId);
+        if (existingMain) {
+          mainId = existingMain.id;
+          if (!subTitle) {
+            alert("같은 이름의 대과제가 이미 있습니다. 기존 대과제를 선택하거나 소과제 제목을 입력하세요.");
+            return;
+          }
+        } else {
+          const now = Date.now();
+          const mainObj = {
+            id: editingId && !appState.tasks.find((t) => t.id === editingId)?.parentId ? editingId : now,
+            title: newMain,
+            memo: subTitle ? "" : memo,
+            owner: subTitle ? "" : owner,
+            start: subTitle ? null : start,
+            end: subTitle ? null : end,
+            completed: subTitle ? false : completed,
+            parentId: null,
+            createdAt: editingId ? (appState.tasks.find((t) => t.id === editingId)?.createdAt || now) : now,
+            updatedAt: now
+          };
+
+          if (editingId) {
+            const old = appState.tasks.find((t) => t.id === editingId);
+            if (old && old.parentId === null && !subTitle) {
+              Object.assign(old, mainObj);
+              finishTaskMutation("대과제를 수정했습니다.");
+              return;
+            }
+          }
+          appState.tasks.unshift(mainObj);
+          mainId = mainObj.id;
+        }
+      } else {
+        alert("대과제 제목을 입력하거나 기존 대과제를 선택하세요.");
+        return;
+      }
+
+      if (subTitle) {
+        const sameSub = appState.tasks.find((t) => t.parentId === mainId && t.title === subTitle && t.id !== editingId);
+        if (sameSub) {
+          alert("같은 대과제 안에 동일한 소과제 제목이 있습니다.");
+          return;
+        }
+
+        const old = editingId ? appState.tasks.find((t) => t.id === editingId) : null;
+        const subObj = {
+          id: editingId || Date.now() + 1,
+          title: subTitle,
+          memo,
+          owner,
+          start,
+          end,
+          completed,
+          parentId: mainId,
+          createdAt: old?.createdAt || Date.now(),
+          updatedAt: Date.now()
+        };
+        if (old) Object.assign(old, subObj);
+        else appState.tasks.unshift(subObj);
+      }
+
+      finishTaskMutation(editingId ? "과제를 수정했습니다." : "과제를 추가했습니다.");
+    }
+
+    function finishTaskMutation(message) {
+      saveCurrentStore();
+      clearForm();
+      renderSelect();
+      renderList();
+      renderTwoMonths();
+      showToast(message);
+    }
+
+    function clearForm() {
+      $("taskForm").reset();
+      $("editingId").value = "";
+      $("formTitle").textContent = "과제 입력";
+      $("addBtn").textContent = "과제 추가";
+      $("cancelEditBtn").hidden = true;
+      updateNewMainVisibility();
+    }
+
+    function toggleCompleted(id) {
+      const item = appState.tasks.find((t) => t.id === id);
+      if (!item) return;
+      item.completed = !item.completed;
+      item.updatedAt = Date.now();
+      saveCurrentStore();
+      renderList();
+      renderTwoMonths();
+    }
+
+    function deleteItem(id) {
+      const item = appState.tasks.find((t) => t.id === id);
+      if (!item) return;
+      const descendants = item.parentId === null ? appState.tasks.filter((t) => t.parentId === id) : [];
+      const message = descendants.length
+        ? `선택한 대과제와 하위 소과제 ${descendants.length}개를 모두 삭제합니다. 진행하시겠습니까?`
+        : "선택한 과제를 삭제합니다. 진행하시겠습니까?";
+      if (!confirm(message)) return;
+      const removeIds = new Set([id, ...descendants.map((t) => t.id)]);
+      appState.tasks = appState.tasks.filter((t) => !removeIds.has(t.id));
+      saveCurrentStore();
+      renderSelect();
+      renderList();
+      renderTwoMonths();
+      clearForm();
+      showToast("과제를 삭제했습니다.");
+    }
+
+    function editItem(id) {
+      const item = appState.tasks.find((t) => t.id === id);
+      if (!item) return;
+      $("editingId").value = String(id);
+      $("formTitle").textContent = "과제 수정";
+      $("addBtn").textContent = "수정 저장";
+      $("cancelEditBtn").hidden = false;
+
+      if (item.parentId === null) {
+        $("mainSelect").value = "";
+        $("newMain").value = item.title;
+        $("subTitle").value = "";
+      } else {
+        $("mainSelect").value = String(item.parentId);
+        $("newMain").value = "";
+        $("subTitle").value = item.title;
+      }
+      $("ownerInput").value = item.owner || "";
+      $("memo").value = item.memo || "";
+      $("startDeadline").value = item.start || "";
+      $("endDeadline").value = item.end || "";
+      $("completed").checked = Boolean(item.completed);
+      updateNewMainVisibility();
+      $("formPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function updateNewMainVisibility() {
+      $("newMainGroup").style.display = $("mainSelect").value ? "none" : "block";
+    }
+
+    function renderTwoMonths() {
+      renderMonth(0, "header0", "calBody0");
+      renderMonth(1, "header1", "calBody1");
+    }
+
+    function renderMonth(offset, headerId, bodyId) {
+      const date = new Date(curYear, curMonth + offset, 1);
+      const year = date.getFullYear();
+      const month = date.getMonth();
+      $(headerId).textContent = `${year}년 ${month + 1}월`;
+
+      const tbody = $(bodyId);
+      tbody.innerHTML = "";
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const today = new Date();
+
+      let tr = document.createElement("tr");
+      for (let i = 0; i < firstDay; i += 1) tr.appendChild(document.createElement("td"));
+
+      for (let d = 1; d <= daysInMonth; d += 1) {
+        if ((firstDay + d - 1) % 7 === 0 && tr.children.length) {
+          tbody.appendChild(tr);
+          tr = document.createElement("tr");
+        }
+
+        const td = document.createElement("td");
+        const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        td.dataset.date = dateStr;
+        td.textContent = String(d);
+
+        const dayIdx = new Date(year, month, d).getDay();
+        if (dayIdx === 0 || dayIdx === 6) td.classList.add("weekend");
+        if (today.getFullYear() === year && today.getMonth() === month && today.getDate() === d) td.classList.add("today");
+        if (appState.redDays.includes(dateStr)) td.classList.add("selected");
+
+        const related = appState.tasks.filter((t) => {
+          const start = getDateOnly(t.start);
+          const end = getDateOnly(t.end);
+          if (!start && !end) return false;
+          if (start && end) return dateStr >= start && dateStr <= end;
+          return dateStr === (start || end);
+        });
+
+        if (related.length) {
+          const dot = document.createElement("div");
+          const statuses = related.map((t) => getTaskStatus(t));
+          const dotStatus = statuses.includes("overdue") ? "overdue" : statuses.every((s) => s === "done") ? "done" : "pending";
+          dot.className = `dot ${dotStatus}`;
+          dot.title = related.map((r) => r.title).join(" · ");
+          td.appendChild(dot);
+        }
+
+        td.addEventListener("dblclick", () => {
+          td.classList.toggle("selected");
+          const index = appState.redDays.indexOf(dateStr);
+          if (td.classList.contains("selected") && index === -1) appState.redDays.push(dateStr);
+          if (!td.classList.contains("selected") && index !== -1) appState.redDays.splice(index, 1);
+          saveCurrentStore();
+        });
+
+        tr.appendChild(td);
+      }
+
+      while (tr.children.length < 7) tr.appendChild(document.createElement("td"));
+      tbody.appendChild(tr);
+    }
+
+    function openStartupModal(prefillCurrent = false) {
+      if (prefillCurrent && appState.currentStoreKey) {
+        const meta = parseMetaFromKey(appState.currentStoreKey);
+        $("deptInput").value = meta.dept;
+        $("roleInput").value = meta.role;
+      }
+      $("startupError").textContent = "";
+      $("startupModal").hidden = false;
+      $("deptInput").focus();
+    }
+
+    function closeStartupModal() {
+      if (appState.currentStoreKey) {
+        $("startupModal").hidden = true;
+      } else {
+        alert("프로그램을 사용하려면 소속과 직책을 입력해야 합니다.");
+      }
+    }
+
+    function confirmStartup() {
+      const dept = normalizeText($("deptInput").value);
+      const role = normalizeText($("roleInput").value);
+      if (!dept || !role) {
+        $("startupError").textContent = "소속과 직책을 모두 입력하세요.";
+        return;
+      }
+      try {
+        const key = makeStoreKey(dept, role);
+        if (!localStorage.getItem(key)) {
+          localStorage.setItem(key, JSON.stringify(normalizePayload({ meta: { dept, role }, tasks: [], redDays: [] })));
+        }
+        loadStore(key);
+        $("startupModal").hidden = true;
+      } catch (error) {
+        $("startupError").textContent = error.message;
+      }
+    }
+
+    function wireEvents() {
+      $("taskForm").addEventListener("submit", handleTaskSubmit);
+      $("mainSelect").addEventListener("change", updateNewMainVisibility);
+      $("cancelEditBtn").addEventListener("click", clearForm);
+      $("backupBtn").addEventListener("click", backupCurrentStore);
+      $("exportAllBtn").addEventListener("click", backupAllStores);
+      $("loadBtn").addEventListener("click", () => $("fileInput").click());
+      $("fileInput").addEventListener("change", (event) => {
+        const file = event.target.files?.[0];
+        if (file) importStoreFromFile(file);
+        event.target.value = "";
+      });
+      $("filterSelect").addEventListener("change", (event) => { currentFilter = event.target.value; renderList(); });
+      $("sortSelect").addEventListener("change", (event) => { currentSort = event.target.value; renderList(); });
+      $("showSub").addEventListener("change", (event) => { showSub = event.target.checked; renderList(); });
+      $("storeSelect").addEventListener("change", (event) => { if (event.target.value) loadStore(event.target.value); });
+      $("prevMonth").addEventListener("click", () => { curMonth -= 1; if (curMonth < 0) { curMonth = 11; curYear -= 1; } renderTwoMonths(); });
+      $("nextMonth").addEventListener("click", () => { curMonth += 1; if (curMonth > 11) { curMonth = 0; curYear += 1; } renderTwoMonths(); });
+      $("btnConfirm").addEventListener("click", confirmStartup);
+      $("btnClose").addEventListener("click", closeStartupModal);
+      $("changeStoreBtn").addEventListener("click", () => openStartupModal(true));
+      $("deptInput").addEventListener("keydown", (e) => { if (e.key === "Enter") confirmStartup(); });
+      $("roleInput").addEventListener("keydown", (e) => { if (e.key === "Enter") confirmStartup(); });
+
+      // 남겨둔 새 스트리지 팝업(호환성 유지)
+      $("createStore").addEventListener("click", () => {
+        const dept = normalizeText($("newDept").value);
+        const role = normalizeText($("newRole").value);
+        if (!dept || !role) { $("newMsg").textContent = "소속과 직책을 모두 입력하세요."; return; }
+        const key = makeStoreKey(dept, role);
+        if (localStorage.getItem(key)) { $("newMsg").textContent = "이미 존재하는 스트리지입니다."; return; }
+        localStorage.setItem(key, JSON.stringify(normalizePayload({ meta: { dept, role }, tasks: [], redDays: [] })));
+        $("newStoreModal").hidden = true;
+        loadStore(key);
+      });
+      $("cancelNew").addEventListener("click", () => { $("newStoreModal").hidden = true; });
+
+      window.addEventListener("storage", (event) => {
+        if (event.key === appState.currentStoreKey) {
+          loadStore(appState.currentStoreKey);
+          showToast("다른 창에서 변경된 내용을 반영했습니다.");
+        }
+      });
+    }
+
+    window.addEventListener("load", () => {
+      wireEvents();
+      renderTwoMonths();
+      openStartupModal(false);
+    });
+  </script>
+</body>
+</html>
